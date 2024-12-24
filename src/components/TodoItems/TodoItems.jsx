@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {TodoItemsContainer} from './TodoItemsContainer';
 import {NewTodoItem} from '../TodoItem/NewTodoItem';
 import {TodoItem} from '../TodoItem/TodoItem';
@@ -7,8 +7,21 @@ import {SearchInput} from './components/SearchInput';
 
 export const TodoItems = () => {
   const [searchValue, setSearchValue] = useState('');
-
+  const [sortedItems, setSortedItems] = useState(null);
   const {data: todoItems, isLoading} = useData();
+
+  useEffect(() => {
+    if (sortedItems) {
+      const filteredBySearchItems = todoItems.filter((todoItem) => {
+        const clearedItemTitle = todoItem.title.replace(/\s+/g, '').toLowerCase();
+        const clearedSearchValue = searchValue.replace(/\s+/g, '').toLowerCase();
+        return clearedItemTitle.includes(clearedSearchValue) || clearedSearchValue.length < 3;
+      });
+      setSortedItems(filteredBySearchItems.sort((a, b) => b.priority - a.priority));
+    } else {
+      setSortedItems(null);
+    }
+  }, [searchValue]);
 
   if (!todoItems || isLoading) {
     return (
@@ -18,27 +31,30 @@ export const TodoItems = () => {
     );
   }
 
-  // Фукнция filter вызывает для каждого элемента переданный ей колбек
-  // И формирует в filteredBySearchItems новый массив элементов, для которых колбек вернул true
-  // Для проверки вхождения подстроки в строку нужно использовать indexOf
   const filteredBySearchItems = todoItems.filter((todoItem) => {
-    // const clearedTodoItemTitle = очистка от пробелов + приведение к одному из регистров
-    // const clearedSearchValue = очистка от пробелов + приведение к одному из регистров
-    // const isSearched = проверка вхождения строки поиска в строку заголовка
-    // return isSearched
-    return true; // удалить после реализации фильтрации
-  })
-
-
-  const todoItemsElements = filteredBySearchItems.map((item, index) => {
-    return <TodoItem key={item.id} title={item.title} checked={item.isDone} />;
+    const clearedItemTitle = todoItem.title.replace(/\s+/g, '').toLowerCase();
+    const clearedSearchValue = searchValue.replace(/\s+/g, '').toLowerCase();
+    const isSearched = clearedItemTitle.includes(clearedSearchValue) || clearedSearchValue.length < 3;
+    return isSearched
   });
+
+  const onClickHandler = () => {
+    const sorted = filteredBySearchItems.sort((a, b) => b.priority - a.priority);
+    setSortedItems(sorted);
+  };
+
+  const todoItemsElements = sortedItems ? sortedItems.map((item) => {
+    return <TodoItem key={item.id} title={item.title} checked={item.isDone} id={item.id} priority={item.priority} />;
+    }) : filteredBySearchItems.map((item) => {
+        return <TodoItem key={item.id} title={item.title} checked={item.isDone} id={item.id} priority={item.priority} />;
+    });
 
   return (
     <TodoItemsContainer>
-      <SearchInput value={searchValue} />
+      <SearchInput value={searchValue} setValue={setSearchValue} setSortedItems={setSortedItems}/>
       {todoItemsElements}
       <NewTodoItem />
+      <button onClick={onClickHandler}>Отсортировать по возрастанию</button>
     </TodoItemsContainer>
   )
-}
+};
